@@ -182,3 +182,60 @@ Once the app is accessible on the internal network:
 ├── appsettings.json       # Default ASP.NET Core config (logging, etc.)
 └── web.config             # IIS AspNetCoreModuleV2 configuration
 ```
+
+## Using the Azure Sample for Custom Claims Provider
+If you're using Microsoft's [official sample documentation](https://learn.microsoft.com/entra/identity-platform/custom-extension-tokenissuancestart-setup?tabs=visual-studio%2Cazure-portal&pivots=azure-portal) to issue custom claims, you'll need to update the function app code with the following so it emits the favoriteColor claim.
+
+```
+#r "Newtonsoft.Json"
+using System.Net;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Primitives;
+using Newtonsoft.Json;
+
+public static async Task<IActionResult> Run(HttpRequest req, ILogger log)
+{
+    log.LogInformation("CCP OnTokenIssuanceStart invoked.");
+
+    string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+
+    // Build the response with the favoriteColor claim
+    ResponseContent r = new ResponseContent();
+    r.data.actions[0].claims.FavoriteColor = "Blue";
+    return new OkObjectResult(r);
+}
+
+public class ResponseContent {
+    [JsonProperty("data")]
+    public Data data { get; set; }
+    public ResponseContent() {
+        data = new Data();
+    }
+}
+
+public class Data {
+    [JsonProperty("@odata.type")]
+    public string odatatype { get; set; }
+    public List<Action> actions { get; set; }
+    public Data() {
+        odatatype = "microsoft.graph.onTokenIssuanceStartResponseData";
+        actions = new List<Action>();
+        actions.Add(new Action());
+    }
+}
+
+public class Action {
+    [JsonProperty("@odata.type")]
+    public string odatatype { get; set; }
+    public Claims claims { get; set; }
+    public Action() {
+        odatatype = "microsoft.graph.tokenIssuanceStart.provideClaimsForToken";
+        claims = new Claims();
+    }
+}
+
+public class Claims {
+    [JsonProperty("favoriteColor", NullValueHandling = NullValueHandling.Ignore)]
+    public string FavoriteColor { get; set; }
+}
+```
