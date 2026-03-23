@@ -107,15 +107,7 @@ Set-ItemProperty "IIS:\AppPools\HeaderEchoApp" -Name managedRuntimeVersion -Valu
 
 ### 6. Create the IIS site
 
-```powershell
-# Replace the port and physical path as needed
-New-Website -Name "HeaderEchoApp" `
-            -PhysicalPath "C:\inetpub\HeaderEchoApp\publish" `
-            -ApplicationPool "HeaderEchoApp" `
-            -Port 8080
-```
-
-To use port 80 with a specific hostname (e.g. for App Proxy):
+Replace `headerapp.yourdomain.com` with your internal hostname (e.g. `headerapp.contoso.com`):
 
 ```powershell
 New-Website -Name "HeaderEchoApp" `
@@ -139,13 +131,15 @@ Set-Acl "C:\inetpub\HeaderEchoApp\publish" $acl
 
 ### 8. Test the site
 
+From the server itself, pass the host header explicitly since the site is bound to a hostname:
+
 ```powershell
-Invoke-WebRequest http://localhost:8080 -UseBasicParsing | Select-Object StatusCode
+Invoke-WebRequest http://localhost -Headers @{ Host = "headerapp.yourdomain.com" } -UseBasicParsing | Select-Object StatusCode
 ```
 
 Expected: `StatusCode: 200`
 
-Browse to the URL — you should see a page listing all HTTP headers received by the app.
+Or browse to `http://headerapp.yourdomain.com` from a machine that can resolve the hostname — you should see a page listing all HTTP headers received by the app.
 
 ---
 
@@ -154,7 +148,7 @@ Browse to the URL — you should see a page listing all HTTP headers received by
 Once the app is accessible on the internal network:
 
 1. In the **Entra admin center**, go to **Enterprise Applications → New application → On-premises application**.
-2. Set the **Internal URL** to `http://<server-hostname>:8080` (or port 80 with host header).
+2. Set the **Internal URL** to `http://headerapp.yourdomain.com` (port 80, matching the IIS host header binding).
 3. Set **Pre-authentication** to `Microsoft Entra ID`.
 4. Under **Single sign-on → Header-based**, add header mappings:
 
